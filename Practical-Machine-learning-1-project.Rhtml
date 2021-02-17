@@ -1,0 +1,108 @@
+<html>
+
+<head>
+<title>Practical Machine Learning Project</title>
+</head>
+
+<body>
+
+<p>Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement ??? a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset)
+
+###Data
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.</p>
+
+<!--begin.rcode
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+library(corrplot)
+library(gbm)
+end.rcode-->
+
+<p>Data Loading</p>
+
+<!--begin.rcode
+train1<-read.csv("C:/Users/binayak mishra/Downloads/pml-training.csv",header = TRUE)
+test1<-read.csv("C:/Users/binayak mishra/Downloads/pml-testing.csv",header = TRUE)
+end.rcode-->
+<p>Data Cleaning</p>
+<!--begin.rcode
+training<-train1[,colSums(is.na(train1))==0]
+testing<-test1[,colSums(is.na(test1))==0]
+training<-training[,-c(1:7)]
+testing<-testing[,-c(1:7)]
+end.rcode-->
+<p>Dataset for prediction</p>
+<!--begin.rcode
+set.seed(12345)
+intrain<-createDataPartition(training$classe,p =0.7,list = FALSE)
+training<-training[intrain,]
+testing<-training[-intrain,]
+### Cleaning by removing nearly zero variance variable
+Nz<-nearZeroVar(training)
+training<-training[,-Nz]
+testing<-testing[,-Nz]
+end.rcode-->
+<p>Plotting the correlation Matrix</p>
+<!--begin.rcode
+cormat<-cor(training[,-53])
+corrplot(cormat,order = "FPC",method = "color",type = "upper",tl.cex = 0.8,tl.col = rgb(0,0,0))
+highcorr<-findCorrelation(cormat,cutoff = 0.75)
+names(training)[highcorr]
+end.rcode-->
+<p>MODEL BUILDING USING CLASSIFICATION TREE</p>
+<!--begin.rcode
+Mod1Tr<-rpart(classe ~ .,data = training, method = "class")
+fancyRpartPlot(Mod1Tr)
+predmod1Tr<-predict(Mod1Tr,testing,type = "class")
+classes<- as.factor(testing$classe)
+cmTr<-confusionMatrix(predmod1Tr,classes)
+cmTr
+end.rcode-->
+<p>MODEL BUILDING USING RANDOM FOREST</p>
+<!--begin.rcode
+contRf<-trainControl(method ="cv",number=5)
+contRf
+MODRF11<- train(classe~., data = training,method="rf",trControl=contRf,verbose= FALSE)
+predictF1<-predict(MODRF11,newdata = testing)
+classes<- as.factor(testing$classe)
+cmrf1<-confusionMatrix(predictF1,classes)
+cmrf1
+### PLOTTING THE Random forest model
+plot(MODRF11)
+plot(cmrf1$table,col=cmrf1$byClass,main= paste("Random forest Confusion Matrix: Accuracy=",round(cmrf1$overall["Accuracy"],4)))
+end.rcode-->
+<p>MODEL BUILDING USING GBM</p>
+<!--begin.rcode
+set.seed(12345)
+controlGBM<-trainControl(method = "repeatedcv",number = 5,repeats = 1)
+modgbm<-train(classe ~.,data = training, method="gbm", trControl=controlGBM, verbose= FALSE)
+modgbm$finalModel
+print(modgbm)
+predictGBM<-predict(modgbm, newdata = testing)
+cmGBM<- confusionMatrix(predictGBM,classes)
+cmGBM
+end.rcode-->
+<p>Result</p>
+<!--begin.rcode
+FinalResult<-predict(MODRF11,newdata = test1)
+FinalResult
+end.rcode-->
+<p>Conclusion<
+
+As can be seen that random forest gives us a prediction accuracy of 100% which is better than gbm(97.5% accuracy) and decision tree whose accuracy is (75%) </p>
+
+
+
